@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MINIMETROPOLIS</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: #2c3e50;
+            color: white;
+            overflow: hidden;
+        }
+        
+        #gameCanvas {
+            background: #34495e;
+            display: block;
+            cursor: crosshair;
+        }
+        
+        .ui-overlay {
+            position: absolute;
+            pointer-events: none;
+        }
+        
+        .toolbar {
+            top: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .hud {
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 8px;
+            min-width: 200px;
+        }
+        
+        .tool-button {
+            pointer-events: auto;
+            padding: 10px 15px;
+            background: #3498db;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        
+        .tool-button:hover {
+            background: #2980b9;
+        }
+        
+        .tool-button.active {
+            background: #e74c3c;
+        }
+        
+        .settings-panel {
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+            min-width: 200px;
+            border: 2px solid #3498db;
+        }
+        
+        .settings-panel h3 {
+            margin: 0 0 15px 0;
+            color: #3498db;
+            font-size: 16px;
+        }
+        
+        .setting-item {
+            margin-bottom: 12px;
+        }
+        
+        .setting-item label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 13px;
+            color: #ecf0f1;
+        }
+        
+        .setting-item select {
+            pointer-events: auto;
+            width: 100%;
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #34495e;
+            background: #2c3e50;
+            color: white;
+            font-size: 12px;
+        }
+        
+        .danger-button {
+            pointer-events: auto;
+            padding: 8px 12px;
+            background: #e74c3c;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            font-size: 12px;
+            width: 100%;
+        }
+        
+        .danger-button:hover {
+            background: #c0392b;
+        }
+        
+        .hud-item {
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .hud-item label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .slider {
+            pointer-events: auto;
+            width: 100%;
+            margin: 5px 0;
+        }
+        
+        .status-text {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    
+    <!-- Toolbar -->
+    <div class="ui-overlay toolbar">
+        <button id="stationTool" class="tool-button active">🏢 Station Tool</button>
+        <button id="trackTool" class="tool-button">🛤️ Track Tool</button>
+        <button id="trainTool" class="tool-button">🚂 Train Tool</button>
+        
+        <!-- Station Settings Panel -->
+        <div id="stationSettings" class="settings-panel" style="display: none;">
+            <h3>Station Settings</h3>
+            <div class="setting-item">
+                <label id="stationName">No station selected</label>
+            </div>
+            <div class="setting-item">
+                <label>Importance Level:</label>
+                <select id="importanceSelect">
+                    <option value="1">Major Hub (Large)</option>
+                    <option value="2">Regional Station (Medium)</option>
+                    <option value="3" selected>Local Stop (Small)</option>
+                </select>
+            </div>
+            <div class="setting-item">
+                <button id="deleteStation" class="danger-button">Delete Station</button>
+            </div>
+            <div class="setting-item">
+                <button id="deselectStation" class="tool-button">Deselect</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- HUD -->
+    <div class="ui-overlay hud">
+        <div class="hud-item">
+            <label>Simulation Speed:</label>
+            <input type="range" id="speedSlider" class="slider" min="0" max="2" step="0.1" value="1">
+            <span id="speedValue">1.0x</span>
+        </div>
+        <div class="hud-item">
+            <strong>Total Passengers:</strong> <span id="totalPassengers">0</span>
+        </div>
+        <div class="hud-item">
+            <strong>Average Wait Time:</strong> <span id="avgWaitTime">0.0s</span>
+        </div>
+        <div class="hud-item">
+            <strong>Stations:</strong> <span id="stationCount">0</span>
+        </div>
+        <div class="hud-item">
+            <strong>Trains:</strong> <span id="trainCount">0</span>
+        </div>
+    </div>
+    
+    <!-- Status -->
+    <div id="statusText" class="status-text">
+        Click empty space to create Local Stop | Click existing station for settings
+    </div>
+    
+    <script type="module" src="main.js"></script>
+</body>
+</html> 
