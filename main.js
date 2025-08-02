@@ -184,8 +184,10 @@ class RailwayGame {
                     this.moveTrainToNextSegment(train);
                 }
             } else {
-                // Move along track
-                this.moveTrainAlongTrack(train, deltaTime);
+                // Move along track only if we have a valid track
+                if (train.pos.currentTrack) {
+                    this.moveTrainAlongTrack(train, deltaTime);
+                }
             }
         }
     }
@@ -201,13 +203,30 @@ class RailwayGame {
         const deltaT = distance / trackLength;
         
         // Use moveDirection for track movement (not route direction)
-        train.pos.t += deltaT * (train.moveDirection || 1);
+        const newT = train.pos.t + deltaT * (train.moveDirection || 1);
         
-        // Check if reached end of track
-        if (train.pos.t >= 0.99 || train.pos.t <= 0.01) {
-            train.pos.t = Math.max(0, Math.min(1, train.pos.t));
+        // Check if reached end of track before updating position
+        if (newT >= 1.0 || newT <= 0.0) {
+            // Clamp to exact end and start waiting
+            const finalT = newT >= 1.0 ? 1.0 : 0.0;
+            train.pos.t = finalT;
             train.waiting = true;
             train.waitTime = 0;
+            
+            // Determine which station we arrived at based on movement direction
+            let arrivedAt;
+            if (train.moveDirection === 1) {
+                // Moving forward: t=0 → fromStation, t=1 → toStation
+                arrivedAt = finalT === 1.0 ? train.pos.toStation : train.pos.fromStation;
+            } else {
+                // Moving backward: t=1 → fromStation, t=0 → toStation
+                arrivedAt = finalT === 0.0 ? train.pos.toStation : train.pos.fromStation;
+            }
+            
+            console.log(`🏁 Train ${train.id}: Arrived at station ${arrivedAt} (t=${finalT}, moveDirection=${train.moveDirection})`);
+        } else {
+            // Safe to move - not at station yet
+            train.pos.t = newT;
         }
     }
     
@@ -215,27 +234,57 @@ class RailwayGame {
      * Move train to next segment of its route
      */
     moveTrainToNextSegment(train) {
-        // Determine next station in route
         const currentStationId = train.getCurrentStation();
         if (!currentStationId) return;
         
-        // Update route position
+        // For simple shuttle routes (most common case), handle explicitly
+        if (train.route.length === 2) {
+            const [stationA, stationB] = train.route;
+            
+            // Get current station using the fixed logic
+            const currentStationId = train.getCurrentStation();
+            
+            // Simple shuttle logic: alternate between the two stations
+            train.currentStation = currentStationId;
+            train.targetStation = train.currentStation === stationA ? stationB : stationA;
+            
+            console.log(`🔄 Shuttle: ${train.currentStation} -> ${train.targetStation}`);
+            
+            const track = this.findTrack(train.currentStation, train.targetStation);
+            if (track) {
+                train.setTrack(track);
+                train.pos.fromStation = train.currentStation;
+                train.pos.toStation = train.targetStation;
+                
+                // Set correct starting position and direction based on track orientation
+                if (track.from === train.currentStation) {
+                    train.pos.t = 0.01;
+                    train.moveDirection = 1;
+                } else {
+                    train.pos.t = 0.99;
+                    train.moveDirection = -1;
+                }
+            } else {
+                console.log(`   ❌ No track found between ${train.currentStation} and ${train.targetStation}!`);
+            }
+            return;
+        }
+        
+        // Handle longer routes with proper direction tracking
         const currentIndex = train.route.indexOf(currentStationId);
-        if (currentIndex === -1) return; // Safety check
+        if (currentIndex === -1) return;
         
         let nextIndex;
         
         if (train.direction === 1) {
             nextIndex = currentIndex + 1;
             if (nextIndex >= train.route.length) {
-                // Reached end of route, reverse direction
                 train.direction = -1;
                 nextIndex = currentIndex - 1;
             }
         } else {
             nextIndex = currentIndex - 1;
             if (nextIndex < 0) {
-                // Reached start of route, reverse direction
                 train.direction = 1;
                 nextIndex = currentIndex + 1;
             }
@@ -249,17 +298,13 @@ class RailwayGame {
                 train.setTrack(track);
                 train.pos.fromStation = currentStationId;
                 train.pos.toStation = nextStationId;
-                train.pos.routeIndex = nextIndex;
                 
-                // Set correct starting position and direction based on track orientation
                 if (track.from === currentStationId) {
-                    // Moving from 'from' to 'to' station
-                    train.pos.t = 0;
-                    train.moveDirection = 1; // Move toward t=1
+                    train.pos.t = 0.01;
+                    train.moveDirection = 1;
                 } else {
-                    // Moving from 'to' to 'from' station  
-                    train.pos.t = 1;
-                    train.moveDirection = -1; // Move toward t=0
+                    train.pos.t = 0.99;
+                    train.moveDirection = -1;
                 }
             }
         }
@@ -398,6 +443,12 @@ class RailwayGame {
         
         // Set initial track - start at the first station
         if (path.length >= 2) {
+            // For shuttles, initialize the current/target station tracking
+            train.currentStation = path[0];
+            train.targetStation = path[1];
+            
+            console.log(`🆕 Created Train ${train.id}: Route [${path.join(' ↔ ')}]`);
+            
             const firstTrack = this.findTrack(path[0], path[1]);
             if (firstTrack) {
                 train.setTrack(firstTrack);
@@ -407,10 +458,10 @@ class RailwayGame {
                 
                 // Set correct starting position and direction
                 if (firstTrack.from === path[0]) {
-                    train.pos.t = 0;
+                    train.pos.t = 0.0;
                     train.moveDirection = 1; // Move toward t=1
                 } else {
-                    train.pos.t = 1;
+                    train.pos.t = 1.0;
                     train.moveDirection = -1; // Move toward t=0
                 }
                 

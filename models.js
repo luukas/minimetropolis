@@ -171,11 +171,15 @@ export class Train {
             routeIndex: 0 // Current position in route
         };
         
+        // For simple shuttles, track which station we're heading toward
+        this.currentStation = route[0]; // Which station the train is currently at/near
+        this.targetStation = route[1] || route[0]; // Which station we're heading to
+        
         this.direction = 1; // 1 for forward, -1 for backward along route
         this.moveDirection = 1; // 1 for moving toward t=1, -1 for moving toward t=0
         this.waiting = false; // True when waiting at a station
         this.waitTime = 0; // Time spent waiting at current station
-        this.waitDuration = 2000; // How long to wait at stations (ms)
+        this.waitDuration = 1000; // How long to wait at stations (ms)
     }
     
     /**
@@ -228,17 +232,19 @@ export class Train {
      * Check if train is at a station
      */
     isAtStation() {
-        return this.pos.t <= 0.01 || this.pos.t >= 0.99; // Use small tolerance for floating point precision
+        return this.pos.t === 0.0 || this.pos.t === 1.0; // Exact match only
     }
     
     /**
      * Get the current station ID if at a station
      */
     getCurrentStation() {
-        if (this.pos.t <= 0.01) {
-            return this.pos.fromStation;
-        } else if (this.pos.t >= 0.99) {
-            return this.pos.toStation;
+        if (this.pos.t === 0.0) {
+            // When at t=0, return the correct station based on movement direction
+            return this.moveDirection === 1 ? this.pos.fromStation : this.pos.toStation;
+        } else if (this.pos.t === 1.0) {
+            // When at t=1, return the correct station based on movement direction
+            return this.moveDirection === 1 ? this.pos.toStation : this.pos.fromStation;
         }
         return null;
     }
